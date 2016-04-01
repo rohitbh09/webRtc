@@ -40,7 +40,7 @@ io.configure(function() {
 	io.set("polling duration", 10);
 });
 
-var port = process.env.PORT || 8080;
+var port = process.env.PORT || 7979;
 
 server.listen(port);
 console.log('Listening on port: ' + port);
