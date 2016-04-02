@@ -16,6 +16,7 @@
 
 <script src="js/adapter.js"></script>
 <script src="js/common.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <script type="text/javascript">
 // var video = document.querySelector('video');
 // var constraints = window.constraints = {
@@ -56,7 +57,7 @@
 // }
 
 var pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]};
-
+var socket = io.connect();
 var startButton = document.getElementById('startButton');
 var callButton = document.getElementById('callButton');
 var hangupButton = document.getElementById('hangupButton');
@@ -147,7 +148,7 @@ function call() {
   pc1.onicecandidate = function(e) {
     onIceCandidate(pc1, e);
   };
-  pc2 = new RTCPeerConnection(servers);
+  pc2 = new RTCPeerConnection(pc_config);
   trace('Created remote peer connection object pc2');
   pc2.onicecandidate = function(e) {
     onIceCandidate(pc2, e);
@@ -175,6 +176,7 @@ function onCreateSessionDescriptionError(error) {
 function onCreateOfferSuccess(desc) {
 
   console.log(desc);
+  socket.emit('data', desc);
   trace('Offer from pc1\n' + desc.sdp);
   trace('pc1 setLocalDescription start');
   pc1.setLocalDescription(desc, function() {
@@ -221,6 +223,7 @@ function onCreateAnswerSuccess(desc) {
 }
 
 function onIceCandidate(pc, event) {
+  // socket.emit('data', event.candidate);
   if (event.candidate) {
     getOtherPc(pc).addIceCandidate(new RTCIceCandidate(event.candidate),
         function() {
@@ -258,6 +261,52 @@ function hangup() {
   hangupButton.disabled = true;
   callButton.disabled = false;
 }
+socket.on('disconnected', function(from) {
+      console.log(from);
+    });
+socket.on('data', function(msg) {
+  if( self == "false" ){
+    desc = new RTCSessionDescription();
+desc.type = "offer";
+desc.sdp  = msg
+  console.log(desc);
+    
+  pc2.setRemoteDescription(desc, function() {
+    onSetRemoteSuccess(pc2);
+  }, onSetSessionDescriptionError);
+  trace('pc2 createAnswer start');
+  // Since the 'remote' side has no media stream we need
+  // to pass in the right constraints in order for it to
+  // accept the incoming offer of audio and video.
+  pc2.createAnswer(onCreateAnswerSuccess, onCreateSessionDescriptionError);
+  }
+  // socket.emit('data', desc);
+  // trace('Offer from pc1\n' + desc.sdp);
+  // trace('pc1 setLocalDescription start');
+  // pc2.setRemoteDescription(desc, function() {
+  //   onSetRemoteSuccess(pc2);
+  // }, onSetSessionDescriptionError);
+  // trace('pc2 createAnswer start');
+  // // Since the 'remote' side has no media stream we need
+  // // to pass in the right constraints in order for it to
+  // // accept the incoming offer of audio and video.
+  // pc2.createAnswer(onCreateAnswerSuccess, onCreateSessionDescriptionError);
+  
+  // if (message.data.type === 'candidate') {
+  //   if (message.data.candidate) {
+  //     console.log('adding an ice candidate');
+  //     pc2.addIceCandidate(new RTCIceCandidate(message.data.candidate));
+  //   }
+  // } else if (message.data.type === 'sdp') {
+  //   console.log('setting remote description and creating answer.')
+  //   pc2.setRemoteDescription(new RTCSessionDescription(message.data.sdp), function() {
+  //     pc2.createAnswer(function(desc) {
+  //       pc2.setLocalDescription(desc);
+  //       // socket.emit('message', { from: myId, to: message.from, data: { type: 'sdp', sdp: desc} } );
+  //     }, failedCreateAnswer);
+  //   }, failedSetRemoteDescription);
+  // }
+});
 </script>
 </body>
 </html>

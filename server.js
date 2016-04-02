@@ -69,6 +69,12 @@ io.sockets.on('connection', function(socket) {
 	});
 
 	// when a message is received forward it to the addressee
+	socket.on('data', function(message) {
+		console.log(message);
+		io.sockets.emit('data', message);
+	});
+
+	// when a message is received forward it to the addressee
 	socket.on('message', function(message) {
 		if (sockets[message.to]) {
 			sockets[message.to].emit('message', message);
